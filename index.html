@@ -5,290 +5,134 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SEOUL SE SMART MAP</title>
-    <!-- Github Pages 경로 최적화 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --accent: #3B82F6;
-            --bg-dark: #000000;
-            --text-main: #FFFFFF;
-        }
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            overflow-x: hidden;
-            margin: 0;
-            -webkit-font-smoothing: antialiased;
-        }
-        
-        .minimal-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .minimal-card:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transform: translateY(-8px);
-        }
-
-        .cta-button {
-            position: relative;
-            overflow: hidden;
-            background: white;
-            color: black;
-            transition: all 0.4s ease;
-        }
-        .cta-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 20px 40px rgba(255, 255, 255, 0.1);
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
-
-        .glass-panel {
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
+        body { font-family: 'Inter', sans-serif; background: black; color: white; margin: 0; overflow-x: hidden; }
+        .minimal-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.4s ease; border-radius: 2rem; }
+        .minimal-card:hover { background: rgba(255, 255, 255, 0.08); border-color: white; transform: translateY(-5px); }
+        .cta-button { background: white; color: black; font-weight: 900; transition: all 0.3s ease; }
+        .cta-button:hover { transform: scale(1.05); filter: invert(1); }
+        iframe { pointer-events: none; }
     </style>
     <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@^19.2.3",
-        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-        "react/": "https://esm.sh/react@^19.2.3/",
-        "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-        "framer-motion": "https://esm.sh/framer-motion@^11.0.0",
-        "@google/genai": "https://esm.sh/@google/genai@^1.36.0"
-      }
-    }
-    </script>
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0",
+    "framer-motion": "https://esm.sh/framer-motion@11.0.8",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
 </head>
 <body>
     <div id="root"></div>
     <script type="module">
-        import React, { useState, useEffect, useMemo, useCallback } from 'react';
-        import ReactDOM from 'react-dom/client';
+        import React, { useState, useEffect, useMemo } from 'react';
+        import { createRoot } from 'react-dom';
         import { motion, AnimatePresence } from 'framer-motion';
-        import { 
-          MapPin, X, BatteryCharging, ShoppingBag, Wrench, 
-          Zap, ChevronLeft, Trash2, ArrowUpRight, Plus, 
-          Save, Lock, ShieldCheck, Home 
-        } from 'lucide-react';
+        import { MapPin, X, BatteryCharging, ShoppingBag, Wrench, Zap, ChevronLeft, Trash2, ArrowUpRight, Plus, Save, Lock, ShieldCheck, Home } from 'lucide-react';
 
-        // --- App Component (Original Logic Preserved) ---
         function App() {
-          const [activeTab, setActiveTab] = useState('home');
-          const [step, setStep] = useState('district');
-          const [selectedDistrict, setSelectedDistrict] = useState('');
-          const [selectedService, setSelectedService] = useState('');
-          const [data, setData] = useState(() => {
-            const saved = localStorage.getItem('seoul_smart_map_v10');
-            return saved ? JSON.parse(saved) : [];
-          });
+            const [tab, setTab] = useState('home');
+            const [step, setStep] = useState('district');
+            const [district, setDistrict] = useState('');
+            const [service, setService] = useState('');
+            const [data, setData] = useState(() => JSON.parse(localStorage.getItem('smart_map_db') || '[]'));
 
-          useEffect(() => { 
-            localStorage.setItem('seoul_smart_map_v10', JSON.stringify(data)); 
-          }, [data]);
+            useEffect(() => { localStorage.setItem('smart_map_db', JSON.stringify(data)); }, [data]);
 
-          useEffect(() => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }, [step, activeTab]);
+            const districts = ['전체', '강남구', '강동구', '송파구', '서초구', '광진구', '성동구'];
+            const services = [
+                { name: '전동휠체어 충전소', icon: React.createElement(Zap, { size: 24 }) },
+                { name: '수리 지정 업체', icon: React.createElement(Wrench, { size: 24 }) },
+                { name: '휴대용 충전기 대여소', icon: React.createElement(BatteryCharging, { size: 24 }) },
+                { name: '휠체어 대여소', icon: React.createElement(ShoppingBag, { size: 24 }) }
+            ];
 
-          const districts = useMemo(() => ['전체', '강남구', '강동구', '송파구', '서초구', '광진구', '성동구'], []);
-          const services = useMemo(() => [
-            { name: '전동휠체어 충전소', icon: React.createElement(Zap, { size: 18 }) },
-            { name: '수리 지정 업체', icon: React.createElement(Wrench, { size: 18 }) },
-            { name: '휴대용 충전기 대여소', icon: React.createElement(BatteryCharging, { size: 18 }) },
-            { name: '휠체어 대여소', icon: React.createElement(ShoppingBag, { size: 18 }) }
-          ], []);
+            const filtered = data.filter(item => 
+                (district === '전체' || item.district === district) && 
+                item.serviceType.includes(service.replace(district, "").trim())
+            );
 
-          return React.createElement('div', { className: "min-h-screen bg-black text-white selection:bg-white selection:text-black" }, [
-            React.createElement(Navbar, { key: 'nav', activeTab, onTabChange: setActiveTab }),
-            React.createElement('main', { key: 'main', className: "relative min-h-screen" }, 
-              React.createElement(AnimatePresence, { mode: "wait" }, [
-                activeTab === 'home' && React.createElement(motion.div, {
-                  key: "home",
-                  initial: { opacity: 0 },
-                  animate: { opacity: 1 },
-                  exit: { opacity: 0 },
-                  className: "h-screen flex items-center justify-center relative"
-                }, [
-                  React.createElement('div', { key: 'bg', className: "absolute inset-0 z-0 scale-105" }, 
-                    React.createElement('iframe', {
-                      src: 'https://my.spline.design/nexbotrobotcharacterconcept-XLVWVFAOrjwv7abuogS3YQZM/',
-                      frameBorder: '0', width: '100%', height: '100%',
-                      className: "grayscale opacity-60 hover:grayscale-0 transition-all duration-1000",
-                      title: "3D Background"
-                    })
-                  ),
-                  React.createElement('div', { key: 'content', className: "relative z-10 w-full px-10 md:px-24 flex flex-col items-start pointer-events-none" }, 
-                    React.createElement(motion.div, {
-                      initial: { y: 60, opacity: 0 },
-                      animate: { y: 0, opacity: 1 },
-                      transition: { delay: 0.2, duration: 1.5 }
-                    }, [
-                      React.createElement('h1', { key: 'h1', className: "text-[10vw] md:text-[7.5vw] font-black tracking-tighter leading-[0.85] uppercase mb-16 text-white/90" }, "서울시 동남\n보조기기센터\nSmart map"),
-                      React.createElement('div', { key: 'btn-wrap', className: "pointer-events-auto" }, 
-                        React.createElement('button', {
-                          onClick: () => { setActiveTab('explorer'); setStep('district'); },
-                          className: "cta-button px-20 py-8 rounded-full text-[12px] font-black uppercase tracking-[0.5em] shadow-2xl"
-                        }, "시작하기")
-                      )
-                    ])
-                  )
+            return React.createElement('div', { className: "min-h-screen" }, [
+                // Nav
+                React.createElement('nav', { key: 'nav', className: "fixed top-0 w-full z-50 p-8 flex justify-between" }, [
+                    React.createElement('button', { onClick: () => setTab('home'), className: "w-12 h-12 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl flex items-center justify-center" }, React.createElement(Home, { size: 20 })),
+                    React.createElement('button', { onClick: () => setTab('admin'), className: "px-6 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-[10px] font-bold tracking-widest" }, "ADMIN")
                 ]),
-                activeTab === 'explorer' && React.createElement(motion.div, {
-                  key: "explorer",
-                  initial: { opacity: 0, y: 20 },
-                  animate: { opacity: 1, y: 0 },
-                  exit: { opacity: 0 },
-                  className: "min-h-screen bg-black"
-                }, step === 'list' ? 
-                   React.createElement(ListView, { district: selectedDistrict, service: selectedService, data, onBack: () => setStep('service') }) :
-                   React.createElement(ExplorerMenu, { step, selectedDistrict, districts, services, onDistrictSelect: (d) => { setSelectedDistrict(d); setStep('service'); }, onServiceSelect: (s) => { setSelectedService(`${selectedDistrict} ${s}`); setStep('list'); } })
-                ),
-                activeTab === 'admin' && React.createElement(AdminPanel, { key: 'admin', data, onSave: setData })
-              ])
-            )
-          ]);
+
+                React.createElement(AnimatePresence, { mode: 'wait', key: 'content' }, [
+                    tab === 'home' && React.createElement(motion.div, { key: 'h', initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, className: "h-screen flex items-center justify-center p-10" }, [
+                        React.createElement('div', { className: "absolute inset-0 -z-10" }, React.createElement('iframe', { src: "https://my.spline.design/nexbotrobotcharacterconcept-XLVWVFAOrjwv7abuogS3YQZM/", frameBorder: "0", width: "100%", height: "100%", className: "grayscale opacity-50" })),
+                        React.createElement('div', { className: "max-w-4xl" }, [
+                            React.createElement('h1', { className: "text-[8vw] font-black leading-[0.85] uppercase mb-10" }, "Seoul Southeast\nSmart Map"),
+                            React.createElement('button', { onClick: () => setTab('explorer'), className: "cta-button px-12 py-5 rounded-full text-sm" }, "탐색 시작하기")
+                        ])
+                    ]),
+
+                    tab === 'explorer' && React.createElement(motion.div, { key: 'e', initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, className: "pt-40 px-10 pb-20 max-w-7xl mx-auto" }, 
+                        step === 'list' ? [
+                            React.createElement('button', { onClick: () => setStep('service'), className: "mb-10 opacity-50 flex items-center gap-2 text-xs" }, [React.createElement(ChevronLeft, { size: 14 }), "BACK"]),
+                            React.createElement('h2', { className: "text-5xl font-black mb-12 uppercase" }, service),
+                            React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-3 gap-6" }, filtered.map(item => 
+                                React.createElement('div', { key: item.id, className: "minimal-card p-10 h-64 flex flex-col justify-between" }, [
+                                    React.createElement('div', null, [
+                                        React.createElement('p', { className: "text-[10px] opacity-30 font-bold mb-2" }, item.district),
+                                        React.createElement('h3', { className: "text-xl font-bold" }, item.name)
+                                    ]),
+                                    React.createElement('div', { className: "flex justify-between items-center opacity-40" }, [
+                                        React.createElement('span', { className: "text-[10px]" }, item.address),
+                                        React.createElement(ArrowUpRight, { size: 16 })
+                                    ])
+                                ])
+                            ))
+                        ] : [
+                            React.createElement('h2', { className: "text-7xl font-black mb-16 uppercase" }, step === 'district' ? "Region" : "Service"),
+                            React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-4 gap-4" }, 
+                                step === 'district' ? districts.map(d => React.createElement('button', { onClick: () => { setDistrict(d); setStep('service'); }, className: "minimal-card p-12 text-left" }, [
+                                    React.createElement('p', { className: "text-[10px] opacity-20 mb-2" }, "NODE"),
+                                    React.createElement('p', { className: "text-2xl font-black" }, d)
+                                ])) : services.map(s => React.createElement('button', { onClick: () => { setService(`${district} ${s.name}`); setStep('list'); }, className: "minimal-card p-12 text-left" }, [
+                                    React.createElement('div', { className: "mb-6 opacity-30" }, s.icon),
+                                    React.createElement('p', { className: "text-lg font-bold" }, s.name)
+                                ]))
+                            )
+                        ]
+                    ),
+
+                    tab === 'admin' && React.createElement(AdminPanel, { key: 'a', data, onSave: setData })
+                ])
+            ]);
         }
 
-        // --- Subcomponents ---
-        const Navbar = ({ activeTab, onTabChange }) => (
-          React.createElement('nav', { className: "fixed top-0 left-0 right-0 z-[100] px-6 py-6 md:px-12 md:py-10" }, 
-            React.createElement('div', { className: "max-w-[1800px] mx-auto flex justify-between items-center" }, [
-              React.createElement('button', {
-                key: 'home-btn',
-                onClick: () => onTabChange('home'),
-                className: `flex items-center justify-center w-14 h-14 rounded-2xl border-2 transition-all ${activeTab === 'home' ? 'bg-white text-black border-white' : 'bg-black/40 text-white border-white/40 backdrop-blur-md hover:border-white'}`
-              }, React.createElement(Home, { size: 26 })),
-              React.createElement('button', {
-                key: 'admin-btn',
-                onClick: () => onTabChange('admin'),
-                className: `text-[10px] font-bold uppercase tracking-[0.4em] px-6 py-3 rounded-xl border-2 backdrop-blur-md ${activeTab === 'admin' ? 'bg-white text-black border-white' : 'bg-black/40 text-white border-white/40'}`
-              }, "Admin System")
-            ])
-          )
-        );
-
-        const ExplorerMenu = ({ step, selectedDistrict, districts, services, onDistrictSelect, onServiceSelect }) => (
-          React.createElement('div', { className: "max-w-[1600px] mx-auto px-12 py-40" }, [
-            React.createElement('div', { key: 'header', className: "mb-40 flex flex-col md:flex-row justify-between items-end gap-10" }, [
-              React.createElement('div', { key: 'title' }, [
-                React.createElement('p', { className: "text-[9px] font-black tracking-[0.8em] text-white/30 uppercase mb-8" }, `PHASE ${step === 'district' ? '01' : '02'}`),
-                React.createElement('h2', { className: "text-7xl md:text-[8vw] font-black tracking-tighter uppercase" }, step === 'district' ? 'Region' : 'Category')
-              ]),
-              React.createElement('p', { key: 'desc', className: "text-[11px] font-medium tracking-[0.2em] opacity-30 uppercase max-w-xs text-right leading-loose" }, 
-                selectedDistrict ? `Refining access for ${selectedDistrict} sector nodes.` : 'Select a primary sector to begin data visualization.'
-              )
-            ]),
-            React.createElement('div', { key: 'grid', className: "grid grid-cols-2 md:grid-cols-4 gap-4" }, 
-              step === 'district' ? districts.map(d => 
-                React.createElement('button', {
-                  key: d, onClick: () => onDistrictSelect(d),
-                  className: "p-16 minimal-card text-left group overflow-hidden relative"
-                }, [
-                  React.createElement('span', { key: 'node', className: "text-[9px] font-bold opacity-30 mb-2 block" }, "NODE"),
-                  React.createElement('span', { key: 'label', className: "text-3xl font-black uppercase tracking-tighter" }, d)
+        function AdminPanel({ data, onSave }) {
+            const [auth, setAuth] = useState(false);
+            const [pw, setPw] = useState('');
+            const [local, setLocal] = useState(data);
+            if (!auth) return React.createElement('div', { className: "h-screen flex items-center justify-center" }, 
+                React.createElement('form', { onSubmit: (e) => { e.preventDefault(); if(pw==='1217') setAuth(true); else alert('Error'); }, className: "p-10 minimal-card text-center" }, [
+                    React.createElement('input', { type: 'password', value: pw, onChange: e => setPw(e.target.value), className: "bg-white/5 border border-white/10 p-4 rounded-xl mb-4 w-full text-center", placeholder: "ACCESS CODE" }),
+                    React.createElement('button', { className: "w-full py-4 bg-white text-black rounded-xl font-bold" }, "LOGIN")
                 ])
-              ) : services.map(s => 
-                React.createElement('button', {
-                  key: s.name, onClick: () => onServiceSelect(s.name),
-                  className: "p-16 minimal-card text-left group"
-                }, [
-                  React.createElement('div', { key: 'icon', className: "mb-10 opacity-40 group-hover:opacity-100 transition-opacity" }, s.icon),
-                  React.createElement('div', { key: 'name', className: "text-xl font-bold uppercase tracking-tight" }, s.name)
-                ])
-              )
-            )
-          ])
-        );
-
-        const ListView = ({ district, service, data, onBack }) => {
-          const [selectedItem, setSelectedItem] = useState(null);
-          const filtered = useMemo(() => data.filter(item => (district === '전체' || item.district === district) && item.serviceType.includes(service.replace(district, "").trim())), [data, district, service]);
-
-          return React.createElement('div', { className: "max-w-[1600px] mx-auto px-10 py-40" }, [
-            React.createElement('button', { key: 'back', onClick: onBack, className: "flex items-center gap-3 text-[9px] font-bold tracking-[0.4em] uppercase opacity-40 hover:opacity-100 mb-10" }, [
-              React.createElement(ChevronLeft, { size: 14 }), "Navigator Back"
-            ]),
-            React.createElement('h2', { key: 'title', className: "text-6xl md:text-[7vw] font-black tracking-tighter mb-6 uppercase" }, service),
-            React.createElement('div', { key: 'grid', className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" }, 
-              filtered.map(item => React.createElement('div', {
-                key: item.id, onClick: () => setSelectedItem(item),
-                className: "minimal-card p-14 h-80 flex flex-col justify-between cursor-pointer group rounded-[2.5rem]"
-              }, [
-                React.createElement('div', { key: 'top' }, [
-                  React.createElement('div', { className: "text-[9px] font-black tracking-[0.2em] text-white/30 uppercase mb-6" }, item.district),
-                  React.createElement('h3', { className: "text-2xl font-bold" }, item.name)
+            );
+            return React.createElement('div', { className: "pt-40 px-10 max-w-5xl mx-auto" }, [
+                React.createElement('div', { className: "flex justify-between mb-10" }, [
+                    React.createElement('h2', { className: "text-3xl font-black" }, "DATABASE"),
+                    React.createElement('button', { onClick: () => onSave(local), className: "bg-white text-black px-6 py-2 rounded-full font-bold text-xs" }, "SAVE CHANGES")
                 ]),
-                React.createElement('div', { key: 'bot', className: "flex items-center justify-between" }, [
-                  React.createElement('div', { className: "text-[11px] opacity-30 flex items-center gap-2" }, [React.createElement(MapPin, { size: 12 }), item.address]),
-                  React.createElement(ArrowUpRight, { size: 16 })
-                ])
-              ]))
-            ),
-            selectedItem && React.createElement(motion.div, {
-              key: 'modal',
-              initial: { opacity: 0 }, animate: { opacity: 1 },
-              className: "fixed inset-0 z-[200] flex items-center justify-center bg-black/95 p-6",
-              onClick: () => setSelectedItem(null)
-            }, React.createElement('div', {
-              className: "w-full max-w-2xl bg-white text-black p-16 rounded-[3.5rem] relative",
-              onClick: e => e.stopPropagation()
-            }, [
-              React.createElement('button', { key: 'close', onClick: () => setSelectedItem(null), className: "absolute top-12 right-12 text-black/10 hover:text-black" }, React.createElement(X, { size: 24 })),
-              React.createElement('h2', { key: 'h2', className: "text-4xl font-black uppercase mb-10" }, selectedItem.name),
-              React.createElement('p', { key: 'addr', className: "text-lg font-bold mb-10" }, selectedItem.address),
-              React.createElement('a', {
-                key: 'link',
-                href: `https://map.kakao.com/link/search/${encodeURIComponent(selectedItem.address)}`,
-                target: "_blank",
-                className: "block w-full py-7 bg-black text-white text-[9px] font-black uppercase tracking-[0.3em] text-center rounded-full"
-              }, "Access Navigation")
-            ]))
-          ]);
-        };
+                React.createElement('div', { className: "space-y-4" }, local.map((item, i) => React.createElement('div', { key: i, className: "flex gap-2" }, [
+                    React.createElement('input', { value: item.name, onChange: e => { const n = [...local]; n[i].name = e.target.value; setLocal(n); }, className: "bg-white/5 p-3 rounded-lg flex-1 text-sm" }),
+                    React.createElement('button', { onClick: () => setLocal(local.filter((_, idx) => idx !== i)) }, React.createElement(Trash2, { size: 16, className: "text-red-500" }))
+                ]))),
+                React.createElement('button', { onClick: () => setLocal([{ id: Date.now(), name: 'New Place', address: '', district: '강남구', serviceType: '전동휠체어 충전소' }, ...local]), className: "mt-8 opacity-40 text-xs" }, "+ ADD DATA")
+            ]);
+        }
 
-        const AdminPanel = ({ data, onSave }) => {
-          const [auth, setAuth] = useState(false);
-          const [pw, setPw] = useState('');
-          const [local, setLocal] = useState(data);
-
-          if (!auth) return React.createElement('div', { className: "h-screen flex items-center justify-center bg-black" }, 
-            React.createElement('form', { 
-              onSubmit: (e) => { e.preventDefault(); if(pw==='1217') setAuth(true); else alert('Wrong'); },
-              className: "p-12 glass-panel border border-white/10 rounded-[2.5rem] text-center"
-            }, [
-              React.createElement('input', { type: 'password', value: pw, onChange: e => setPw(e.target.value), className: "bg-white/5 border border-white/10 rounded-xl p-4 text-center mb-4 block w-full", placeholder: "PASSWORD" }),
-              React.createElement('button', { className: "bg-white text-black p-4 rounded-xl w-full font-bold" }, "LOGIN")
-            ])
-          );
-
-          return React.createElement('div', { className: "max-w-6xl mx-auto py-40 px-6" }, [
-            React.createElement('div', { key: 'top', className: "flex justify-between items-end mb-10" }, [
-              React.createElement('h2', { className: "text-4xl font-black" }, "DATA CONTROL"),
-              React.createElement('button', { onClick: () => onSave(local), className: "bg-white text-black px-8 py-3 rounded-full font-bold" }, "SAVE ALL")
-            ]),
-            React.createElement('div', { key: 'list', className: "bg-white/5 rounded-3xl p-6" }, 
-              local.map((item, idx) => React.createElement('div', { key: item.id, className: "flex gap-4 mb-2" }, [
-                React.createElement('input', { value: item.name, onChange: e => {
-                  const n = [...local]; n[idx].name = e.target.value; setLocal(n);
-                }, className: "bg-black/40 p-2 rounded flex-1" })
-              ]))
-            ),
-            React.createElement('button', { onClick: () => setLocal([{ id: Date.now(), name: '', address: '', district: '강남구', serviceType: '전동휠체어 충전소' }, ...local]), className: "mt-4 opacity-50" }, "+ ADD NEW")
-          ]);
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(App));
+        createRoot(document.getElementById('root')).render(React.createElement(App));
     </script>
 </body>
 </html>
