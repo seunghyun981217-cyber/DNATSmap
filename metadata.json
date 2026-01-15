@@ -1,0 +1,7 @@
+{
+  "name": "Seoul Southeast Assistive Technology Center Smart Map",
+  "description": "A high-end, hip, and futuristic web experience for the Seoul Southeast Assistive Technology Center Smart Map, featuring 3D robot concepts and smooth Mobbin-inspired animations.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
