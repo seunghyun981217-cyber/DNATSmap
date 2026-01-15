@@ -1,438 +1,458 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
   MapPin, 
-  Settings, 
-  ArrowRight, 
-  Compass, 
-  Activity, 
-  Layers,
-  Menu,
   X,
-  Cpu,
+  BatteryCharging,
+  ShoppingBag,
+  Wrench,
+  Database,
+  Navigation,
   Zap,
-  ChevronRight,
-  Globe
+  ChevronLeft,
+  Trash2,
+  ArrowUpRight,
+  Plus,
+  Save,
+  Lock,
+  ShieldCheck,
+  Home
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 
-// Custom Seoul Logo Icon Component
-const SeoulIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="30" r="15" fill="#E60012" />
-    <path d="M20 50C20 50 35 35 50 50C65 65 80 50 80 50V80C80 80 65 95 50 80C35 65 20 80 20 80V50Z" fill="#007BC3" />
-    <path d="M10 55C10 55 15 45 25 45C35 45 40 55 40 55L35 70C35 70 30 65 25 65C20 65 15 70 15 70L10 55Z" fill="#388E3C" />
-  </svg>
-);
+// --- Types ---
+interface InfrastructureData {
+  id: string;
+  name: string;
+  address: string;
+  district: string;
+  serviceType: string;
+  phone: string;
+  date: string;
+}
 
-const DistrictModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
-  if (!isOpen) return null;
+// --- High-End Navigation Component ---
+// React.memo를 사용하여 불필요한 리렌더링 방지
+const Navbar = React.memo(({ activeTab, onTabChange }: { activeTab: string, onTabChange: (tab: 'home' | 'explorer' | 'admin') => void }) => (
+  <nav className="fixed top-0 left-0 right-0 z-[100] px-6 py-6 md:px-12 md:py-10" role="navigation">
+    <div className="max-w-[1800px] mx-auto flex justify-between items-center">
+      <div className="flex items-center">
+        <button 
+          onClick={() => onTabChange('home')}
+          className={`group flex items-center justify-center w-14 h-14 rounded-2xl border-2 transition-all duration-500 shadow-xl ${activeTab === 'home' ? 'bg-white text-black border-white' : 'bg-black/40 text-white border-white/40 backdrop-blur-md hover:border-white hover:bg-black/60'}`}
+          aria-label="홈으로 이동"
+          aria-current={activeTab === 'home' ? 'page' : undefined}
+        >
+          <Home size={26} className="group-hover:scale-110 transition-transform" aria-hidden="true" />
+        </button>
+      </div>
 
-  const districts = [
-    { name: '강동구', sub: 'Gangdong-gu', icon: <MapPin className="text-blue-500" />, count: '128 locations' },
-    { name: '강남구', sub: 'Gangnam-gu', icon: <Globe className="text-purple-500" />, count: '256 locations' },
-  ];
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={() => onTabChange('admin')} 
+          className={`text-[10px] font-bold uppercase tracking-[0.4em] transition-all px-6 py-3 rounded-xl border-2 backdrop-blur-md ${activeTab === 'admin' ? 'bg-white text-black border-white opacity-100 shadow-lg' : 'bg-black/40 text-white border-white/40 opacity-70 hover:opacity-100 hover:border-white'}`}
+          aria-label="관리자 시스템 접근"
+        >
+          Admin System
+        </button>
+      </div>
+    </div>
+  </nav>
+));
+
+// --- Admin Panel ---
+const AdminPanel = ({ data, onSave }: { data: InfrastructureData[], onSave: (data: InfrastructureData[]) => void }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [localData, setLocalData] = useState<InfrastructureData[]>(data);
+  const districtList = useMemo(() => ["강남구", "서초구", "강동구", "송파구", "성동구", "광진구"], []);
+  const serviceCategories = useMemo(() => ["전동휠체어 충전소", "수리 지정 업체", "휴대용 충전기 대여소", "휠체어 대여소"], []);
+
+  const handleLogin = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === '1217') {
+      setIsAuthenticated(true);
+    } else {
+      alert('비밀번호가 일치하지 않습니다.');
+      setPassword('');
+    }
+  }, [password]);
+
+  const addNewRow = useCallback(() => {
+    const newRow: InfrastructureData = {
+      id: `node-${Date.now()}`,
+      name: "",
+      address: "",
+      district: "강남구",
+      serviceType: "전동휠체어 충전소",
+      phone: "",
+      date: new Date().toLocaleDateString()
+    };
+    setLocalData(prev => [newRow, ...prev]);
+  }, []);
+
+  const removeRow = useCallback((id: string) => {
+    setLocalData(prev => prev.filter(i => i.id !== id));
+  }, []);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="h-screen flex items-center justify-center px-6 bg-black">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md p-12 glass-panel border border-white/10 rounded-[2.5rem] text-center bg-[#0a0a0a]">
+          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
+            <Lock size={24} className="opacity-50" aria-hidden="true" />
+          </div>
+          <h2 className="text-xl font-bold uppercase tracking-widest mb-2">System Access</h2>
+          <p className="text-[10px] opacity-30 uppercase tracking-[0.2em] mb-10">Authorized Personnel Only</p>
+          <form onSubmit={handleLogin}>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="ENTER ACCESS CODE"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-sm tracking-[0.5em] focus:border-white/30 outline-none transition-all mb-4"
+              autoFocus
+              aria-label="비밀번호 입력"
+            />
+            <button type="submit" className="w-full py-4 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:invert transition-all">Authenticate</button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-xl" onClick={onClose}></div>
-      <div className="relative w-full max-w-lg glass-card p-8 shadow-[0_0_100px_rgba(59,130,246,0.15)] animate-in zoom-in-95 slide-in-from-bottom-10 duration-500 ring-1 ring-white/20">
-        <button 
-          onClick={onClose}
-          className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-        >
-          <X size={20} />
-        </button>
-
-        <div className="mb-10 text-center">
-          <div className="inline-flex p-3 bg-blue-600/10 rounded-2xl mb-4">
-            <Compass size={32} className="text-blue-500" />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-6xl mx-auto px-6 py-40">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-12 mb-16">
+        <div>
+          <div className="flex items-center gap-3 mb-4 opacity-50">
+            <ShieldCheck size={16} aria-hidden="true" />
+            <span className="text-[9px] font-black uppercase tracking-[0.3em]">Administrator Verified</span>
           </div>
-          <h2 className="text-3xl font-black uppercase tracking-tighter mb-2">Select District</h2>
-          <p className="text-white/40 text-sm">탐색을 시작할 지역을 선택해주세요.</p>
+          <h2 className="text-5xl font-black tracking-tighter uppercase text-white/90">Data Control</h2>
         </div>
-
-        <div className="space-y-4">
-          {districts.map((d, i) => (
-            <button 
-              key={i}
-              className="w-full flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-3xl hover:bg-blue-600/10 hover:border-blue-500/30 transition-all group overflow-hidden relative"
-              onClick={() => {
-                alert(`${d.name} 스마트맵으로 이동합니다.`);
-                onClose();
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-600/0 to-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="flex items-center gap-5 relative z-10">
-                <div className="p-4 bg-white/5 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all">
-                  {d.icon}
-                </div>
-                <div className="text-left">
-                  <div className="text-xl font-bold tracking-tight">{d.name}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-white/30 font-bold">{d.sub}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 relative z-10">
-                <span className="text-[10px] uppercase font-bold text-white/20 group-hover:text-blue-400 transition-colors">{d.count}</span>
-                <ChevronRight size={20} className="text-white/10 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
-              </div>
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-10 pt-8 border-t border-white/5 text-center">
-          <p className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-bold">Smart Map Navigation System</p>
+        <div className="flex gap-4">
+          <button onClick={addNewRow} className="px-8 py-4 bg-white/5 border border-white/10 rounded-full text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors flex items-center gap-2">
+            <Plus size={14} aria-hidden="true" /> Add Row
+          </button>
+          <button onClick={() => { onSave(localData); alert('데이터가 저장되었습니다.'); }} className="px-8 py-4 bg-white text-black rounded-full text-[9px] font-bold uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2">
+            <Save size={14} aria-hidden="true" /> Sync Cloud
+          </button>
         </div>
       </div>
+
+      <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden">
+        <div className="grid grid-cols-12 gap-4 px-8 py-6 border-b border-white/10 text-[9px] font-black uppercase tracking-widest opacity-30 bg-white/[0.03]">
+          <div className="col-span-3">Facility Name</div>
+          <div className="col-span-4">Address</div>
+          <div className="col-span-2">District</div>
+          <div className="col-span-2">Service Type</div>
+          <div className="col-span-1 text-center">Action</div>
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
+          {localData.map((item) => (
+            <div key={item.id} className="grid grid-cols-12 gap-4 px-8 py-4 items-center border-b border-white/5 hover:bg-white/[0.03] transition-colors group">
+              <div className="col-span-3">
+                <input 
+                  value={item.name} 
+                  onChange={(e) => setLocalData(prev => prev.map(i => i.id === item.id ? {...i, name: e.target.value} : i))}
+                  className="w-full bg-transparent border-none outline-none text-sm font-bold focus:text-blue-400" 
+                  aria-label="시설명 입력"
+                />
+              </div>
+              <div className="col-span-4">
+                <input 
+                  value={item.address} 
+                  onChange={(e) => setLocalData(prev => prev.map(i => i.id === item.id ? {...i, address: e.target.value} : i))}
+                  className="w-full bg-transparent border-none outline-none text-xs opacity-60 focus:opacity-100" 
+                  aria-label="주소 입력"
+                />
+              </div>
+              <div className="col-span-2">
+                <select 
+                  value={item.district} 
+                  onChange={(e) => setLocalData(prev => prev.map(i => i.id === item.id ? {...i, district: e.target.value} : i))}
+                  className="bg-black text-[10px] font-bold uppercase p-2 border border-white/10 rounded w-full"
+                  aria-label="자치구 선택"
+                >
+                  {districtList.map(d => <option key={d}>{d}</option>)}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <select 
+                  value={item.serviceType} 
+                  onChange={(e) => setLocalData(prev => prev.map(i => i.id === item.id ? {...i, serviceType: e.target.value} : i))}
+                  className="bg-black text-[10px] font-bold uppercase p-2 border border-white/10 rounded w-full"
+                  aria-label="서비스 유형 선택"
+                >
+                  {serviceCategories.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="col-span-1 text-center">
+                <button onClick={() => removeRow(item.id)} className="p-2 opacity-20 group-hover:opacity-100 text-red-400 hover:bg-red-500/10 rounded-lg transition-all" aria-label="삭제">
+                  <Trash2 size={14}/>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// --- List View ---
+const ListView = ({ district, service, data, onBack }: { district: string, service: string, data: InfrastructureData[], onBack: () => void }) => {
+  const [selectedItem, setSelectedItem] = useState<InfrastructureData | null>(null);
+  
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
+      const matchDistrict = district === '전체' || item.district === district;
+      const matchService = service === '전체 서비스' || item.serviceType.includes(service.replace(district, "").trim());
+      return matchDistrict && matchService;
+    });
+  }, [data, district, service]);
+
+  return (
+    <div className="w-full max-w-[1600px] mx-auto px-10 py-40">
+      <div className="mb-32">
+        <button 
+          onClick={onBack} 
+          className="flex items-center gap-3 text-[9px] font-bold tracking-[0.4em] uppercase opacity-40 hover:opacity-100 transition-all mb-10 group"
+          aria-label="이전 단계로"
+        >
+          <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" aria-hidden="true"/> Navigator Back
+        </button>
+        <h2 className="text-6xl md:text-[7vw] font-black tracking-tighter leading-tight mb-6 uppercase text-white/90">{service}</h2>
+        <div className="flex items-center gap-4">
+            <div className="h-px w-12 bg-white/20" aria-hidden="true"></div>
+            <p className="text-[10px] font-medium tracking-[0.5em] opacity-30 uppercase">{district} Node Coverage</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" role="list">
+        {filteredData.map((item) => (
+          <motion.div 
+            whileHover={{ y: -5 }}
+            key={item.id} 
+            onClick={() => setSelectedItem(item)}
+            className="minimal-card p-14 h-80 flex flex-col justify-between cursor-pointer group rounded-[2.5rem]"
+            role="listitem"
+            aria-label={`${item.name} 상세 정보`}
+          >
+            <div>
+              <div className="text-[9px] font-black tracking-[0.2em] text-white/30 uppercase mb-6 group-hover:text-white transition-colors">{item.district}</div>
+              <h3 className="text-2xl font-bold tracking-tight leading-tight opacity-80 group-hover:opacity-100 transition-opacity">{item.name}</h3>
+            </div>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-[11px] opacity-30 font-medium">
+                  <MapPin size={12} aria-hidden="true" /> <span className="truncate max-w-[150px]">{item.address}</span>
+                </div>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowUpRight size={16} aria-hidden="true" />
+                </div>
+            </div>
+          </motion.div>
+        ))}
+        {filteredData.length === 0 && (
+            <div className="col-span-full py-40 text-center opacity-20 border border-white/5 rounded-[3rem]">
+                <p className="text-[10px] font-bold tracking-[0.5em] uppercase">No Data Nodes Found</p>
+            </div>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {selectedItem && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-2xl p-6"
+            onClick={() => setSelectedItem(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+            <motion.div 
+              initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              className="w-full max-w-2xl bg-white text-black p-16 md:p-24 rounded-[3.5rem] relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <button onClick={() => setSelectedItem(null)} className="absolute top-12 right-12 text-black/10 hover:text-black transition-colors" aria-label="닫기">
+                <X size={24} aria-hidden="true" />
+              </button>
+              <div className="mb-20">
+                <p className="text-[9px] font-black tracking-[0.5em] uppercase text-black/30 mb-6">{selectedItem.district} / System Utility</p>
+                <h2 id="modal-title" className="text-4xl md:text-5xl font-black tracking-tighter leading-none uppercase">{selectedItem.name}</h2>
+              </div>
+              <div className="space-y-12 mb-20">
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest opacity-20 block mb-4">Location Coordinate</label>
+                  <p className="text-lg font-bold leading-relaxed opacity-80">{selectedItem.address}</p>
+                </div>
+              </div>
+              <a 
+                href={`https://map.kakao.com/link/search/${encodeURIComponent(selectedItem.address)}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full py-7 bg-black text-white text-[9px] font-black uppercase tracking-[0.3em] text-center rounded-full hover:invert transition-all"
+              >
+                Access Navigation Node
+              </a>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
-// Components
-const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  
+export default function App() {
+  const [activeTab, setActiveTab] = useState<'home' | 'explorer' | 'admin'>('home');
+  const [step, setStep] = useState<'district' | 'service' | 'list'>('district');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedService, setSelectedService] = useState('');
+  const [data, setData] = useState<InfrastructureData[]>(() => {
+    const saved = localStorage.getItem('seoul_smart_map_v10');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => { 
+    localStorage.setItem('seoul_smart_map_v10', JSON.stringify(data)); 
+  }, [data]);
+
+  const districts = useMemo(() => ['전체', '강남구', '강동구', '송파구', '서초구', '광진구', '성동구'], []);
+  const services = useMemo(() => [
+    { name: '전동휠체어 충전소', icon: <Zap size={18} aria-hidden="true" /> },
+    { name: '수리 지정 업체', icon: <Wrench size={18} aria-hidden="true" /> },
+    { name: '휴대용 충전기 대여소', icon: <BatteryCharging size={18} aria-hidden="true" /> },
+    { name: '휠체어 대여소', icon: <ShoppingBag size={18} aria-hidden="true" /> }
+  ], []);
+
+  // 단계 변경 시 상단으로 스크롤 자동 이동 (UX 최적화)
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step, activeTab]);
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-6 py-4 ${isScrolled ? 'bg-black/80 backdrop-blur-md border-b border-white/10' : 'bg-transparent'}`}>
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center neon-glow overflow-hidden p-1 shadow-lg shadow-blue-500/20">
-            <SeoulIcon className="w-full h-full" />
-          </div>
-          <span className="text-lg md:text-xl font-black tracking-tighter uppercase whitespace-nowrap">
-            서울시동남보조기기센터 <span className="text-blue-500">SMART MAP</span>
-          </span>
-        </div>
-        
-        <div className="hidden lg:flex items-center gap-8 text-sm font-medium tracking-wide">
-          <a href="#services" className="hover:text-blue-400 transition-colors">보조기기 서비스</a>
-          <a href="#map" className="hover:text-blue-400 transition-colors">스마트 맵</a>
-          <a href="#about" className="hover:text-blue-400 transition-colors">센터안내</a>
-        </div>
-        
-        <button className="lg:hidden p-2 text-white">
-          <Menu size={28} />
-        </button>
-      </div>
-    </nav>
-  );
-};
+    <div className="min-h-screen bg-black text-white overflow-x-hidden selection:bg-white selection:text-black">
+      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
 
-const Hero = ({ onOpenModal }: { onOpenModal: () => void }) => {
-  return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 px-6 overflow-hidden">
-      {/* Background Spline Mesh */}
-      <div className="absolute inset-0 z-0 opacity-80 pointer-events-auto">
-        <iframe 
-          src='https://my.spline.design/nexbotrobotcharacterconcept-XLVWVFAOrjwv7abuogS3YQZM/' 
-          frameBorder='0' 
-          width='100%' 
-          height='100%'
-          className="w-full h-full scale-110 md:scale-100"
-          title="NexBot 3D Robot"
-        ></iframe>
-      </div>
-
-      <div className="relative z-10 text-center max-w-5xl pointer-events-none mt-auto mb-20">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6 backdrop-blur-sm">
-          <SeoulIcon className="w-4 h-4" />
-          <span className="text-[10px] font-bold tracking-widest uppercase text-white/70">Seoul Southeast Assistive Technology Center</span>
-        </div>
-        <h1 className="text-4xl md:text-7xl lg:text-8xl font-black mb-12 tracking-tight leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 uppercase">
-          서울시동남보조기기센터<br/><span className="text-blue-500 text-3xl md:text-6xl lg:text-7xl block mt-4">SMART MAP</span>
-        </h1>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center pointer-events-auto">
-          <button 
-            onClick={onOpenModal}
-            className="group relative px-10 py-5 bg-blue-600 rounded-full font-bold overflow-hidden transition-all hover:bg-blue-500 shadow-xl shadow-blue-600/30"
-          >
-            <span className="relative z-10 flex items-center gap-2 text-lg uppercase tracking-tight">지도 바로가기 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" /></span>
-          </button>
-          
-          {/* Updated link for 센터 소개 */}
-          <a 
-            href="http://www.seoulats.or.kr/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="px-10 py-5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full font-bold backdrop-blur-md transition-all text-lg uppercase tracking-tight flex items-center justify-center"
-          >
-            센터 소개
-          </a>
-        </div>
-      </div>
-      
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
-        <div className="w-px h-12 bg-gradient-to-b from-blue-500 to-transparent"></div>
-        <span className="text-[10px] uppercase tracking-[0.3em]">Scroll Down</span>
-      </div>
-    </section>
-  );
-};
-
-const MapInterface = () => {
-  const [query, setQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-
-  const handleSearch = async () => {
-    if (!query) return;
-    setIsSearching(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `서울시동남보조기기센터 스마트맵 사용자(휠체어, 보조기기 이용자)를 위해 다음 장소의 접근성 정보를 상세히 알려주세요: ${query}. (답변은 한국어로, 핵심 접근성 포인트 3가지를 강조해주세요)`,
-        config: {
-          tools: [{ googleSearch: {} }]
-        }
-      });
-      setResult(response.text || "데이터를 분석할 수 없습니다.");
-    } catch (err) {
-      setResult("검색 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  return (
-    <section id="map" className="py-32 px-6 relative bg-black">
-      <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center">
-        <div className="order-2 lg:order-1">
-          <div className="glass-card p-10 min-h-[550px] flex flex-col shadow-2xl relative overflow-hidden ring-1 ring-white/10">
-            <div className="absolute top-0 right-0 p-6 opacity-10">
-               <SeoulIcon className="w-32 h-32" />
-            </div>
-            
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-10">
-                <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></div>
-                <span className="text-[10px] font-black tracking-[0.4em] text-blue-400 uppercase">AI Navigator Active</span>
+      <main className="relative min-h-screen" id="main-content">
+        <AnimatePresence mode="wait">
+          {activeTab === 'home' && (
+            <motion.div 
+              key="home" 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="h-screen flex items-center justify-center relative"
+            >
+              <div className="absolute inset-0 z-0 scale-105">
+                <iframe 
+                  src='https://my.spline.design/nexbotrobotcharacterconcept-XLVWVFAOrjwv7abuogS3YQZM/' 
+                  frameBorder='0' 
+                  width='100%' 
+                  height='100%'
+                  loading="eager"
+                  className="grayscale opacity-60 hover:grayscale-0 transition-all duration-1000"
+                  title="Spline 3D Robot Background"
+                ></iframe>
               </div>
-              
-              <h3 className="text-3xl font-bold mb-8 text-white tracking-tight">목적지 접근성 분석</h3>
-              
-              <div className="relative mb-10">
-                <input 
-                  type="text" 
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="예: 잠실역 엘리베이터 위치"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg placeholder:text-white/20"
-                />
-                <button 
-                  onClick={handleSearch}
-                  disabled={isSearching}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-4 bg-blue-600 rounded-xl hover:bg-blue-500 transition-all disabled:opacity-50"
+
+              <div className="relative z-10 w-full px-10 md:px-24 flex flex-col items-start pointer-events-none">
+                <motion.div 
+                  initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                  className="max-w-6xl"
                 >
-                  <Search size={24} />
-                </button>
+                    <div className="flex items-center gap-4 mb-8 opacity-40">
+                        <div className="h-[1px] w-12 bg-white" aria-hidden="true"></div>
+                        <span className="text-[9px] font-bold tracking-[0.5em] uppercase">City Navigation Infrastructure</span>
+                    </div>
+                  <h1 className="text-[10vw] md:text-[7.5vw] font-black tracking-tighter leading-[0.85] uppercase mb-16 text-white/90">
+                    서울시 동남<br/>보조기기센터<br/>Smart map
+                  </h1>
+                  <div className="pointer-events-auto">
+                    <button 
+                      onClick={() => { setActiveTab('explorer'); setStep('district'); }}
+                      className="cta-button px-20 py-8 rounded-full text-[12px] font-black uppercase tracking-[0.5em] shadow-2xl hover:bg-black hover:text-white transition-all"
+                      aria-label="탐색 시작하기"
+                    >
+                      시작하기
+                    </button>
+                  </div>
+                </motion.div>
               </div>
 
-              {isSearching ? (
-                <div className="flex flex-col items-center justify-center h-56 gap-6">
-                  <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-                  <p className="text-blue-400 font-bold animate-pulse tracking-widest uppercase text-xs">AI 공간 데이터 분석 중...</p>
+              <div className="absolute bottom-12 left-12 right-12 flex justify-between items-center text-[7px] font-bold uppercase tracking-[0.6em] opacity-20 pointer-events-none">
+                <span>PROTOCOL V.12.0</span>
+                <div className="flex gap-10">
+                    <span>RELIABILITY</span>
+                    <span>ACCESSIBILITY</span>
                 </div>
-              ) : result ? (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 bg-white/5 p-8 rounded-2xl border border-white/10 shadow-inner">
-                  <div className="flex items-center gap-3 mb-6 text-blue-400">
-                    <MapPin size={22} />
-                    <span className="font-black text-sm tracking-widest uppercase">Smart Report</span>
-                  </div>
-                  <div className="text-white/80 leading-relaxed text-base font-light whitespace-pre-wrap">
-                    {result}
-                  </div>
-                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'explorer' && (
+            <motion.div 
+              key="explorer" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="min-h-screen bg-black"
+            >
+              {step === 'list' ? (
+                <ListView district={selectedDistrict} service={selectedService} data={data} onBack={() => setStep('service')} />
               ) : (
-                <div className="flex flex-col items-center justify-center h-56 opacity-10">
-                  <MapPin size={64} className="mb-4" />
-                  <p className="text-xl font-bold uppercase tracking-tighter">Enter destination</p>
+                <div className="max-w-[1600px] mx-auto px-12 py-40">
+                  <div className="mb-40 flex flex-col md:flex-row justify-between items-end gap-10">
+                    <div>
+                        <p className="text-[9px] font-black tracking-[0.8em] text-white/30 uppercase mb-8">PHASE {step === 'district' ? '01' : '02'}</p>
+                        <h2 className="text-7xl md:text-[8vw] font-black tracking-tighter leading-none uppercase">
+                        {step === 'district' ? 'Region' : 'Category'}
+                        </h2>
+                    </div>
+                    <p className="text-[11px] font-medium tracking-[0.2em] opacity-30 uppercase max-w-xs text-right leading-loose">
+                        {selectedDistrict ? `Refining access for ${selectedDistrict} sector nodes.` : 'Select a primary sector to begin data visualization.'}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4" role="group" aria-label={step === 'district' ? "지역 선택" : "서비스 선택"}>
+                    {step === 'district' ? districts.map((d) => (
+                      <button 
+                        key={d} onClick={() => { setSelectedDistrict(d); setStep('service'); }}
+                        className="p-16 minimal-card text-left group overflow-hidden relative"
+                        aria-label={`${d} 선택`}
+                      >
+                        <div className="relative z-10">
+                            <span className="text-[9px] font-bold opacity-30 mb-2 block group-hover:opacity-100 transition-opacity" aria-hidden="true">NODE</span>
+                            <span className="text-3xl font-black uppercase tracking-tighter">{d}</span>
+                        </div>
+                        <div className="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out" aria-hidden="true"></div>
+                        <span className="absolute inset-0 flex items-center p-16 text-black text-3xl font-black uppercase tracking-tighter translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out z-20" aria-hidden="true">{d}</span>
+                      </button>
+                    )) : services.map((s) => (
+                      <button 
+                        key={s.name} onClick={() => { setSelectedService(`${selectedDistrict} ${s.name}`); setStep('list'); }}
+                        className="p-16 minimal-card text-left group relative overflow-hidden"
+                        aria-label={`${s.name} 선택`}
+                      >
+                        <div className="mb-10 opacity-40 group-hover:opacity-100 transition-opacity" aria-hidden="true">
+                            {s.icon}
+                        </div>
+                        <div className="text-xl font-bold uppercase tracking-tight leading-tight group-hover:text-blue-400 transition-colors">
+                            {s.name}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
-            </div>
+            </motion.div>
+          )}
 
-            <div className="mt-12 pt-8 border-t border-white/10 flex justify-between items-center text-[9px] text-white/30 uppercase tracking-[0.3em] font-bold">
-              <span>Smart Map Engine v4.0</span>
-              <div className="flex gap-4">
-                <span className="flex items-center gap-1.5"><div className="w-1 h-1 rounded-full bg-blue-500"></div> Online</span>
-                <span className="hidden sm:inline">Encrypted Data</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="order-1 lg:order-2">
-          <div className="mb-6 inline-block p-3 bg-blue-600/10 rounded-2xl border border-blue-600/20">
-            <SeoulIcon className="w-10 h-10" />
-          </div>
-          <h2 className="text-4xl md:text-6xl font-black mb-8 tracking-tight leading-none uppercase">서울시동남보조기기센터<br/><span className="text-blue-500">스마트 맵 서비스</span></h2>
-          <p className="text-white/50 text-xl mb-12 leading-relaxed font-light">
-            우리는 기술을 통해 누구에게나 평평한 서울을 만듭니다. 실시간 공공데이터와 AI 분석을 결합하여 휠체어 및 보조기기 사용자를 위한 맞춤형 경로를 안내합니다.
-          </p>
-          
-          <div className="space-y-6">
-            <div className="flex items-start gap-6 p-8 glass-card hover:bg-white/5 transition-all border-l-4 border-blue-600 group">
-              <div className="p-4 bg-blue-600/20 rounded-2xl text-blue-400 group-hover:scale-110 transition-transform">
-                <Compass size={32} />
-              </div>
-              <div>
-                <h4 className="font-bold text-xl mb-2 text-white">배리어프리 정밀 안내</h4>
-                <p className="text-sm text-white/40 leading-relaxed">엘리베이터의 실시간 가동 상태부터 경사로의 각도까지, 가장 정확한 정보를 제공합니다.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-6 p-8 glass-card hover:bg-white/5 transition-all border-l-4 border-purple-600 group">
-              <div className="p-4 bg-purple-600/20 rounded-2xl text-purple-400 group-hover:scale-110 transition-transform">
-                <Activity size={32} />
-              </div>
-              <div>
-                <h4 className="font-bold text-xl mb-2 text-white">실시간 도로 인프라 데이터</h4>
-                <p className="text-sm text-white/40 leading-relaxed">갑작스러운 공사나 장애물 정보를 즉각적으로 공유하여 안전한 이동을 보장합니다.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const FeatureSection = () => {
-  return (
-    <section className="py-32 bg-[#080808]">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-8">
-          <div className="max-w-2xl">
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6 uppercase">핵심 <span className="text-blue-500">기술력</span></h2>
-            <p className="text-white/40 text-lg font-light leading-relaxed">
-              서울시동남보조기기센터는 단순한 지도를 넘어 보조공학 기술의 정수를 담았습니다.
-            </p>
-          </div>
-          <button className="px-8 py-4 border border-white/10 rounded-full text-xs font-bold uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all">
-            모든 기술 보기
-          </button>
-        </div>
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              title: "3D 공간 스캐닝",
-              desc: "LiDAR 기술을 활용한 3D 입체 매핑으로 실내외 통합 경로를 완벽하게 안내합니다.",
-              icon: <Layers className="w-10 h-10 text-blue-500" />
-            },
-            {
-              title: "기기별 맞춤 최적화",
-              desc: "전동 휠체어, 수동 휠체어, 유모차 등 사용 기기에 따른 차별화된 경로를 생성합니다.",
-              icon: <Settings className="w-10 h-10 text-purple-500" />
-            },
-            {
-              title: "서울 공공 데이터 연동",
-              desc: "서울시의 모든 교통 및 인프라 데이터를 실시간으로 수집하여 정확도를 높였습니다.",
-              icon: <Cpu className="w-10 h-10 text-green-500" />
-            }
-          ].map((item, idx) => (
-            <div key={idx} className="group p-12 glass-card hover:scale-[1.03] transition-all duration-500 hover:ring-1 hover:ring-blue-500/50">
-              <div className="mb-10 p-5 bg-white/5 rounded-3xl w-fit group-hover:bg-blue-600 group-hover:text-white transition-all shadow-xl shadow-blue-500/0 group-hover:shadow-blue-500/20">
-                {item.icon}
-              </div>
-              <h3 className="text-2xl font-black mb-6 uppercase tracking-tight">{item.title}</h3>
-              <p className="text-white/40 leading-relaxed font-light">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const Footer = () => {
-  return (
-    <footer className="py-24 px-6 border-t border-white/10 bg-black">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start gap-16">
-        <div className="max-w-md">
-          <div className="flex items-center gap-3 mb-8">
-            <SeoulIcon className="w-10 h-10" />
-            <span className="text-2xl font-black tracking-tighter uppercase">서울시동남보조기기센터 <span className="text-blue-500">SMART MAP</span></span>
-          </div>
-          <p className="text-white/30 text-base leading-relaxed mb-10 font-light">
-            서울특별시동남보조기기센터는 장애인 및 노인을 위한 전문적인 보조기기 서비스를 통해 일상생활의 편의와 삶의 질 향상을 도모하는 서울특별시 지정 전문기관입니다.
-          </p>
-          <div className="flex gap-4">
-            {[Activity, MapPin, Zap].map((Icon, i) => (
-              <div key={i} className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-blue-600 transition-all cursor-pointer group">
-                <Icon size={20} className="text-white/40 group-hover:text-white" />
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-16">
-          <div>
-            <h5 className="font-black mb-8 text-[11px] uppercase tracking-[0.4em] text-blue-500">Service</h5>
-            <ul className="space-y-5 text-sm font-light text-white/40">
-              <li className="hover:text-white cursor-pointer transition-colors">스마트 맵</li>
-              <li className="hover:text-white cursor-pointer transition-colors">보조기기 대여</li>
-              <li className="hover:text-white cursor-pointer transition-colors">맞춤 제작 지원</li>
-            </ul>
-          </div>
-          <div>
-            <h5 className="font-black mb-8 text-[11px] uppercase tracking-[0.4em] text-blue-500">Center</h5>
-            <ul className="space-y-5 text-sm font-light text-white/40">
-              <li className="hover:text-white cursor-pointer transition-colors">센터 안내</li>
-              <li className="hover:text-white cursor-pointer transition-colors">공지사항</li>
-              <li className="hover:text-white cursor-pointer transition-colors">오시는 길</li>
-            </ul>
-          </div>
-          <div className="col-span-2 sm:col-span-1">
-             <h5 className="font-black mb-8 text-[11px] uppercase tracking-[0.4em] text-blue-500">Updates</h5>
-             <div className="flex flex-col gap-4">
-               <p className="text-[10px] text-white/20 font-light uppercase tracking-widest">새로운 소식을 받아보세요</p>
-               <div className="flex gap-2">
-                 <input type="text" placeholder="이메일 입력" className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs w-full outline-none focus:border-blue-500 font-light" />
-                 <button className="bg-blue-600 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all">구독</button>
-               </div>
-             </div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="max-w-7xl mx-auto mt-24 pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] text-white/20 uppercase tracking-[0.4em] font-medium">
-        <p>© 2025 서울특별시동남보조기기센터. All rights reserved.</p>
-        <div className="flex gap-8">
-          <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
-          <span className="hover:text-white cursor-pointer transition-colors">Terms of Use</span>
-        </div>
-      </div>
-    </footer>
-  );
-};
-
-export default function App() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  return (
-    <div className="min-h-screen selection:bg-blue-600 selection:text-white">
-      <Navbar />
-      <Hero onOpenModal={() => setIsModalOpen(true)} />
-      <FeatureSection />
-      <MapInterface />
-      <Footer />
-      
-      <DistrictModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      
-      {/* Visual background accents */}
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 blur-[200px] rounded-full opacity-50"></div>
-        <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-600/10 blur-[200px] rounded-full opacity-50"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.02)_0%,transparent_70%)]"></div>
-      </div>
+          {activeTab === 'admin' && (
+            <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="bg-black">
+              <AdminPanel data={data} onSave={setData} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
     </div>
   );
 }
