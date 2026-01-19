@@ -65,8 +65,6 @@ const AdminPanel = ({ data, onSave }: { data: InfrastructureData[], onSave: (dat
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [localData, setLocalData] = useState<InfrastructureData[]>(data);
-  const districtList = useMemo(() => ["강남구", "서초구", "강동구", "송파구", "성동구", "광진구"], []);
-  const serviceCategories = useMemo(() => ["전동휠체어 충전소", "수리 지정 업체", "휴대용 충전기 대여소", "휠체어 대여소"], []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,7 +249,7 @@ export default function App() {
           <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-screen flex items-center justify-center relative">
             <div className="absolute inset-0 z-0"><iframe src='https://my.spline.design/nexbotrobotcharacterconcept-XLVWVFAOrjwv7abuogS3YQZM/' width='100%' height='100%' className="grayscale opacity-50"></iframe></div>
             <div className="relative z-10 px-10 md:px-24 w-full">
-              <h1 className="text-[10vw] font-black tracking-tighter leading-[0.85] uppercase mb-16">SEOUL SE<br/>SMART MAP</h1>
+              <h1 className="text-[10vw] font-black tracking-tighter leading-[0.85] uppercase mb-16">SEOUL ATS<br/>SMART MAP</h1>
               <button onClick={() => { setActiveTab('explorer'); setStep('selector'); }} className="cta-button px-20 py-8 rounded-full text-[12px] font-black uppercase tracking-[0.5em]">시작하기</button>
             </div>
           </motion.div>
